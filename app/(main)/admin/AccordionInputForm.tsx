@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { removeEmptyStringFields } from '@/utils';
 import JsonView from '@uiw/react-json-view';
@@ -27,7 +27,7 @@ function getDefaultValuesFromSchema(
   const values: Record<string, any> = {};
 
   for (const key in shape) {
-    values[key] = defaultValues[key] || ''; // Use the default value if available, or set an empty string as a fallback
+    values[key] = defaultValues[key] || ''; // Use the default value or set an empty string as a fallback
   }
 
   return values;
@@ -47,7 +47,7 @@ function isZodOptional(type: z.ZodType<any, any>): boolean {
 }
 
 function NestedField({ control, name, schema, defaultValue, description, placeholder }: NestedFieldProps) {
-  const optionalText = isZodOptional(schema) ? ' (optional)' : '';
+  const optionalText = isZodOptional(schema) ? '(optional)' : <span className="text-red-500">*</span>;
 
   if (schema instanceof z.ZodObject) {
     return (
@@ -59,7 +59,7 @@ function NestedField({ control, name, schema, defaultValue, description, placeho
             control={control}
             name={`${name}.${key}`}
             schema={schema.shape[key]}
-            defaultValue={defaultValue && defaultValue[key]} // Pass the default value for nested fields
+            defaultValue={defaultValue ? defaultValue[key] : undefined}
             placeholder={placeholder}
           />
         ))}
@@ -74,8 +74,7 @@ function NestedField({ control, name, schema, defaultValue, description, placeho
       render={({ field }) => (
         <FormItem className="pb-4">
           <FormLabel className="pb-4">
-            {name.split('.').pop()} {Boolean(optionalText.length) && optionalText}
-            {!(schema instanceof z.ZodOptional) && <span className="text-red-500">*</span>}
+            {name.split('.').pop()} {optionalText}
           </FormLabel>
           <FormControl>
             <Input placeholder={placeholder || `Enter ${name}`} {...field} />
@@ -105,11 +104,7 @@ export default function AccordionInputForm({
 
   async function onSubmit(values: z.infer<typeof formSchema>, event: any) {
     event.preventDefault();
-
-    // const fcnResult = !hasEmptyString(form.getValues()) ? await onSubmitFcn(form.getValues()) : await onSubmitFcn({});
-
     const fcnResult = await onSubmitFcn(removeEmptyStringFields(form.getValues()));
-
     setResult(fcnResult);
   }
 
